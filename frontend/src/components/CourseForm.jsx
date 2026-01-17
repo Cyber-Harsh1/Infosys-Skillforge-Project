@@ -1,0 +1,198 @@
+import React, { useState } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  MenuItem,
+  Typography,
+  Alert,
+  Paper,
+  CircularProgress,
+} from "@mui/material";
+import api from "../services/api";
+
+const CourseForm = ({ onCourseAdded }) => {
+  const [courseData, setCourseData] = useState({
+    title: "",
+    description: "",
+    difficulty: "",
+    duration: "",
+  });
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setCourseData((prev) => ({ ...prev, [name]: value }));
+    if (error) setError("");
+  };
+
+  const handleClear = () => {
+    setCourseData({
+      title: "",
+      description: "",
+      difficulty: "",
+      duration: "",
+    });
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!courseData.title || !courseData.difficulty || !courseData.duration) {
+      setError("Title, Difficulty, and Duration are required");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const instructorId = localStorage.getItem("userId");
+
+      if (!instructorId) {
+        throw new Error("Instructor ID not found. Please log in again.");
+      }
+
+      // ✅ FIXED: Flatten the payload to match CourseRequestDTO
+      // Backend expects: instructorId: 5
+      const payload = {
+        title: courseData.title,
+        description: courseData.description,
+        difficulty: courseData.difficulty,
+        duration: courseData.duration,
+        instructorId: parseInt(instructorId), // Simple number, not an object
+      };
+
+      await api.post("/courses", payload);
+
+      handleClear();
+      setSuccess(true);
+
+      if (onCourseAdded) onCourseAdded();
+      setTimeout(() => setSuccess(false), 4000);
+    } catch (err) {
+      console.error("Failed to add course:", err);
+      const msg = err.response?.data?.error || "Failed to add course.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Paper elevation={0} sx={{ p: 1 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert
+          severity="success"
+          sx={{ mb: 2 }}
+          onClose={() => setSuccess(false)}
+        >
+          Course added successfully!
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <TextField
+          fullWidth
+          label="Course Title *"
+          name="title"
+          value={courseData.title}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
+          disabled={loading}
+          placeholder="e.g. Advanced Java Programming"
+        />
+
+        <TextField
+          fullWidth
+          label="Description"
+          name="description"
+          multiline
+          rows={3}
+          value={courseData.description}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
+          disabled={loading}
+          placeholder="What will students learn in this course?"
+        />
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            mb: 3,
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
+          <TextField
+            select
+            fullWidth
+            label="Difficulty *"
+            name="difficulty"
+            value={courseData.difficulty}
+            onChange={handleChange}
+            disabled={loading}
+          >
+            <MenuItem value="Beginner">Beginner</MenuItem>
+            <MenuItem value="Intermediate">Intermediate</MenuItem>
+            <MenuItem value="Advanced">Advanced</MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            fullWidth
+            label="Duration *"
+            name="duration"
+            value={courseData.duration}
+            onChange={handleChange}
+            disabled={loading}
+          >
+            <MenuItem value="3 Months">3 Months</MenuItem>
+            <MenuItem value="6 Months">6 Months</MenuItem>
+            <MenuItem value="9 Months">9 Months</MenuItem>
+            <MenuItem value="12 Months">12 Months</MenuItem>
+          </TextField>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            size="large"
+            fullWidth
+            disabled={loading}
+            sx={{ fontWeight: "bold" }}
+          >
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Save Course"
+            )}
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="secondary"
+            size="large"
+            onClick={handleClear}
+            disabled={loading}
+          >
+            Clear
+          </Button>
+        </Box>
+      </Box>
+    </Paper>
+  );
+};
+
+export default CourseForm;

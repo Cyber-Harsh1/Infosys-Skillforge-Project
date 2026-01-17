@@ -1,0 +1,15 @@
+# node
+node_modules/
+
+# java
+target/
+
+# ide
+.idea/
+*.iml
+
+# zip files
+*.zip
+
+# env
+.env
